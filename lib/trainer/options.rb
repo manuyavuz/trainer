@@ -33,7 +33,12 @@ module Trainer
                                      env_name: "TRAINER_FAIL_BUILD",
                                      description: "Should this step stop the build if the tests fail? Set this to false if you're handling this with a test reporter",
                                      is_string: false,
-                                     default_value: true)
+                                     default_value: true),
+        FastlaneCore::ConfigItem.new(key: :report_devices_individually,
+                                     env_name: "TRAINER_REPORT_DEVICES_INDIVIDUALLY",
+                                     description: "Should trainer report test summaries per device when tests run on multiple destinations",
+                                     is_string: false,
+                                     default_value: false)
       ]
     end
   end
