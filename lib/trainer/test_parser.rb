@@ -12,16 +12,24 @@ module Trainer
       FastlaneCore::PrintTable.print_values(config: config,
                                              title: "Summary for trainer #{Trainer::VERSION}")
 
+      report_devices_individually = config[:report_devices_individually]
       containing_dir = config[:path]
-      # Xcode < 10
-      files = Dir["#{containing_dir}/**/Logs/Test/*TestSummaries.plist"]
-      files += Dir["#{containing_dir}/Test/*TestSummaries.plist"]
-      files += Dir["#{containing_dir}/*TestSummaries.plist"]
-      # Xcode 10
-      files += Dir["#{containing_dir}/**/Logs/Test/*.xcresult/TestSummaries.plist"]
-      files += Dir["#{containing_dir}/Test/*.xcresult/TestSummaries.plist"]
-      files += Dir["#{containing_dir}/*.xcresult/TestSummaries.plist"]
-      files += Dir[containing_dir] if containing_dir.end_with?(".plist") # if it's the exact path to a plist file
+
+      if report_devices_individually
+        files = Dir["#{containing_dir}/**/Logs/Test/*Test/*TestSummaries.plist"]
+        files += Dir["#{containing_dir}/Test/*Test/*TestSummaries.plist"]
+        files += Dir["#{containing_dir}/*Test/*TestSummaries.plist"]
+      else
+        # Xcode < 10
+        files = Dir["#{containing_dir}/**/Logs/Test/*TestSummaries.plist"]
+        files += Dir["#{containing_dir}/Test/*TestSummaries.plist"]
+        files += Dir["#{containing_dir}/*TestSummaries.plist"]
+        # Xcode 10
+        files += Dir["#{containing_dir}/**/Logs/Test/*.xcresult/TestSummaries.plist"]
+        files += Dir["#{containing_dir}/Test/*.xcresult/TestSummaries.plist"]
+        files += Dir["#{containing_dir}/*.xcresult/TestSummaries.plist"]
+        files += Dir[containing_dir] if containing_dir.end_with?(".plist") # if it's the exact path to a plist file
+      end
 
       if files.empty?
         UI.user_error!("No test result files found in directory '#{containing_dir}', make sure the file name ends with 'TestSummaries.plist'")
@@ -32,12 +40,20 @@ module Trainer
         if config[:output_directory]
           FileUtils.mkdir_p(config[:output_directory])
           filename = File.basename(path).gsub(".plist", config[:extension])
+          if report_devices_individually
+            filename = File.dirname(path) + "_" + filename
+          end
           to_path = File.join(config[:output_directory], filename)
         else
           to_path = path.gsub(".plist", config[:extension])
         end
 
         tp = Trainer::TestParser.new(path, config)
+
+        if report_devices_individually
+          tp[:target_name] = tp[:device_os_identifier] + tp[:target_name]
+        end
+
         File.write(to_path, tp.to_junit)
         puts "Successfully generated '#{to_path}'"
 
@@ -122,9 +138,11 @@ module Trainer
 
     # Convert the Hashes and Arrays in something more useful
     def parse_content(xcpretty_naming)
+      device_os_identifier = self.raw_json["RunDestination"]["Name"] + self.raw_json["RunDestination"]["TargetSDK"]["Name"]
       self.data = self.raw_json["TestableSummaries"].collect do |testable_summary|
         summary_row = {
           project_path: testable_summary["ProjectPath"],
+          device_os_identifier: device_os_identifier,
           target_name: testable_summary["TargetName"],
           test_name: testable_summary["TestName"],
           duration: testable_summary["Tests"].map { |current_test| current_test["Duration"] }.inject(:+),
@@ -139,6 +157,8 @@ module Trainer
               guid: current_test["TestSummaryGUID"],
               duration: current_test["Duration"]
             }
+            require 'pp'
+            pp current_test
             if current_test["FailureSummaries"]
               current_row[:failures] = current_test["FailureSummaries"].collect do |current_failure|
                 {
