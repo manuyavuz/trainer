@@ -164,8 +164,6 @@ module Trainer
               guid: current_test["TestSummaryGUID"],
               duration: current_test["Duration"]
             }
-            require 'pp'
-            pp current_test
             if current_test["FailureSummaries"]
               current_row[:failures] = current_test["FailureSummaries"].collect do |current_failure|
                 {
