@@ -41,7 +41,7 @@ module Trainer
           FileUtils.mkdir_p(config[:output_directory])
           filename = File.basename(path).gsub(".plist", config[:extension])
           if report_devices_individually
-            filename = File.dirname(path) + "_" + filename
+            filename = File.basename(File.dirname(path)) + "_" + filename
           end
           to_path = File.join(config[:output_directory], filename)
         else
@@ -49,9 +49,10 @@ module Trainer
         end
 
         tp = Trainer::TestParser.new(path)
-
         if report_devices_individually
-          tp[:target_name] = tp[:device_os_identifier] + tp[:target_name]
+          tp.data.each do |summary|
+            summary[:target_name] = summary[:device_os_identifier] + '/' + summary[:target_name]
+          end
         end
 
         File.write(to_path, tp.to_junit)
@@ -125,7 +126,7 @@ module Trainer
 
     # Convert the Hashes and Arrays in something more useful
     def parse_content
-      device_os_identifier = self.raw_json["RunDestination"]["Name"] + self.raw_json["RunDestination"]["TargetSDK"]["Name"]
+      device_os_identifier = self.raw_json["RunDestination"]["Name"] + ' ' + self.raw_json["RunDestination"]["TargetSDK"]["Name"]
       self.data = self.raw_json["TestableSummaries"].collect do |testable_summary|
         summary_row = {
           project_path: testable_summary["ProjectPath"],
