@@ -140,7 +140,12 @@ module Trainer
 
     # Convert the Hashes and Arrays in something more useful
     def parse_content(xcpretty_naming)
-      device_os_identifier = self.raw_json["RunDestination"]["Name"] + ' ' + self.raw_json["RunDestination"]["TargetSDK"]["Name"]
+      target_device = self.raw_json["RunDestination"]["TargetDevice"]
+      device_os_identifier = [
+        target_device["Name"],
+        target_device["Platform"]["Name"],
+        target_device["OperatingSystemVersion"]
+      ].join(' ')
       self.data = self.raw_json["TestableSummaries"].collect do |testable_summary|
         summary_row = {
           project_path: testable_summary["ProjectPath"],
