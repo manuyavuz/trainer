@@ -39,7 +39,7 @@ module Trainer
                                      env_name: "TRAINER_XCPRETTY_NAMING",
                                      description: "Produces class name and test name identical to xcpretty naming in junit file",
                                      is_string: false,
-                                     default_value: false)
+                                     default_value: false),
         FastlaneCore::ConfigItem.new(key: :report_devices_individually,
                                      env_name: "TRAINER_REPORT_DEVICES_INDIVIDUALLY",
                                      description: "Should trainer report test summaries per device when tests run on multiple destinations",
